@@ -1,3 +1,11 @@
+mod code;
+mod head;
+mod link;
+mod list;
+mod parse;
+mod text;
+mod utils;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Markdown<'a> {
     Config(Option<&'a str>),
@@ -8,53 +16,53 @@ pub enum Markdown<'a> {
         id: &'a str,
     },
     /// # 粗斜体
-    /// ```markdown
+    /// ```Markdown
     /// ***bold italic***
     /// ```
     BoldItalic(Vec<Markdown<'a>>),
     /// # 粗体
-    /// ```markdown
+    /// ```Markdown
     /// **blod**
     /// ```
     Bold(Vec<Markdown<'a>>),
     /// # 斜体
-    /// ```markdown
+    /// ```Markdown
     /// *italic*
     /// __italic__
     /// ```
     Italic(Vec<Markdown<'a>>),
     /// # 删除线
-    /// ```markdown
+    /// ```Markdown
     /// ~~strike~~
     /// ```
     Strike(Vec<Markdown<'a>>),
     /// # 高亮
-    /// ```markdown
+    /// ```Markdown
     /// ==highlight==
     /// ^^highlight^^
     /// ```
     Highlight(Vec<Markdown<'a>>),
     /// # 引语
-    /// ```markdown
+    /// ```Markdown
     /// > quote1
     /// >> quote2
     /// ```
     BlockQuote(Vec<Markdown<'a>>),
     /// # 有序列表
-    /// ```markdown
+    /// ```Markdown
     /// 1. list
     /// 2. list
     /// ```
     OrderedList(Vec<Markdown<'a>>),
     /// # 无序列表
-    /// ```markdown
+    /// ```Markdown
     /// - list
     /// + list
     /// * list
     /// ```
     UnorderedList(Vec<Markdown<'a>>),
     /// # 任务列表
-    /// ``` markdown
+    /// ``` Markdown
     /// -[] task1
     /// -[x] task2
     /// ```
@@ -65,37 +73,46 @@ pub enum Markdown<'a> {
     /// # 连续回车只解析成一个换行
     NewLine,
     /// # 分割线
-    /// ```markdown
+    /// ```Markdown
     /// ---
     /// ```
     HorizontalRule,
     /// # 原始链接
-    /// ```markdown
+    /// ```Markdown
     /// https://example.com/
     /// ```
     RawLink(&'a str),
     /// #外部链接
-    /// ```markdown
+    /// ```Markdown
     /// [title](url)
     /// ```
-    UrlLink { title: &'a str, url: &'a str },
+    UrlLink {
+        title: &'a str,
+        url: &'a str,
+    },
     ///# 图片链接
-    /// ```markdown
+    /// ```Markdown
     /// ![alt](url)
     /// ```
-    Image { alt: &'a str, url: &'a str },
+    Image {
+        alt: &'a str,
+        url: &'a str,
+    },
     /// # 行内代码
-    /// ```markdown
+    /// ```Markdown
     /// `code`
     /// ```
     Code(&'a str),
     /// 代码块
-    /// ```markdown
+    /// ```Markdown
     /// \```text
     /// code
     /// \```
     /// ```
-    CodeBlock { lang: &'a str, code: &'a str },
+    CodeBlock {
+        lang: &'a str,
+        code: &'a str,
+    },
     /// # 表格
     Table(&'a str),
     /// # 直接插入的原始 html 标签

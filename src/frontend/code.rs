@@ -1,0 +1,19 @@
+use nom::{IResult, Parser};
+use nom::{
+    bytes::complete::{tag, take_until},
+    combinator::map,
+};
+
+use super::utils::fenced;
+
+pub fn code(input: &str) -> IResult<&str, &str> {
+    fenced("`", "`").parse(input)
+}
+
+pub fn code_block(input: &str) -> IResult<&str, (&str, &str)> {
+    map(
+        (tag("```"), take_until("\n"), take_until("```"), tag("```")),
+        |x| (x.1, x.2),
+    )
+    .parse(input)
+}

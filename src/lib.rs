@@ -1,3 +1,4 @@
-mod md_core;
+mod backend;
+mod frontend;
 
-pub use md_core::Markdown;
+pub use frontend::Markdown;

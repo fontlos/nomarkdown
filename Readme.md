@@ -1,1 +1,1 @@
-# Nomarkdown: Markdown parser by nom
+# Nomarkdown: Markdown parser powered by nom
