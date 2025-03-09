@@ -130,4 +130,6 @@ pub enum Markdown<'a> {
     Table(&'a str),
     /// # 拓展语法，由双层大括号包裹
     Command(&'a str),
+    /// 一个特殊的变体, 无任何效果, 只用于容纳一个枚举数组
+    Vanilla(Vec<Markdown<'a>>),
 }

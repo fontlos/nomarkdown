@@ -11,33 +11,69 @@ use nom::{
 use super::Markdown;
 use super::parse::line_element_parser;
 
+#[cfg(not(feature = "strict"))]
 /// 文字变体解析器生成器
+fn text_parser_gen<'a, F>(
+    boundary: &'a str,
+    map: F,
+) -> impl Parser<&'a str, Output = Markdown<'a>, Error = Error<&'a str>>
+where
+    F: Fn(Vec<Markdown<'a>>) -> Markdown<'a> + 'a,
+{
+    delimited(tag(boundary), take_until(boundary), tag(boundary))
+        .and_then(line_element_parser)
+        .map(map)
+}
+
+#[cfg(feature = "strict")]
+/// 文字变体解析器生成器严格模式
 fn text_parser_gen<'a>(
     boundary: &'a str,
-) -> impl Parser<&'a str, Output = Vec<Markdown<'a>>, Error = Error<&'a str>> {
-    delimited(tag(boundary), take_until(boundary), tag(boundary)).and_then(line_element_parser)
+    map: fn(Vec<Markdown<'a>>) -> Markdown<'a>,
+) -> impl Parser<&'a str, Output = Markdown<'a>, Error = Error<&'a str>> {
+    move |input: &'a str| {
+        // 首先我们解析文字变体, 保留剩余部分
+        let (remaining, parsed) =
+            delimited(tag(boundary), take_until(boundary), tag(boundary)).parse(input)?;
+        // 对于解析部分看是否符合标准, 如果两边有空白字符, 那么不作为文字变体, 定界符也将作为普通字符, 但内部被匹配的部分将继续解析
+        if parsed.starts_with(|c: char| c.is_whitespace())
+            || parsed.ends_with(|c: char| c.is_whitespace())
+        {
+            let (_, elements) = line_element_parser(parsed)?;
+            let mut res = Vec::with_capacity(3);
+            // 定位第一个定界符, 从当前输入开头一直到定界符长度
+            res.push(Markdown::Text(&input[..boundary.len()]));
+            res.extend(elements);
+            // 定位第二个定界符, 从当前输入被匹配的内容的结尾, 到这个位置再加上一个定界符的长度
+            res.push(Markdown::Text(
+                &input[boundary.len() + parsed.len()..2 * boundary.len() + parsed.len()],
+            ));
+            Ok((remaining, Markdown::Vanilla(res)))
+        } else {
+            let (_, elements) = line_element_parser(parsed)?;
+            Ok((remaining, map(elements)))
+        }
+    }
 }
 
 fn bold_italic(input: &str) -> IResult<&str, Markdown> {
-    text_parser_gen("***")
-        .map(Markdown::BoldItalic)
-        .parse(input)
+    text_parser_gen("***", Markdown::BoldItalic).parse(input)
 }
 
 fn bold(input: &str) -> IResult<&str, Markdown> {
-    text_parser_gen("**").map(Markdown::Bold).parse(input)
+    text_parser_gen("**", Markdown::Bold).parse(input)
 }
 
 fn italic(input: &str) -> IResult<&str, Markdown> {
-    text_parser_gen("*").map(Markdown::Italic).parse(input)
+    text_parser_gen("*", Markdown::Italic).parse(input)
 }
 
 fn strike(input: &str) -> IResult<&str, Markdown> {
-    text_parser_gen("~~").map(Markdown::Strike).parse(input)
+    text_parser_gen("~~", Markdown::Strike).parse(input)
 }
 
 fn highlight(input: &str) -> IResult<&str, Markdown> {
-    text_parser_gen("==").map(Markdown::Highlight).parse(input)
+    text_parser_gen("==", Markdown::Highlight).parse(input)
 }
 
 pub fn text_parser(input: &str) -> IResult<&str, Markdown> {
@@ -61,6 +97,23 @@ mod tests {
                 Markdown::Text(" 剩余加粗斜体")
             ])
         );
-        println!("{:?}", md);
+    }
+
+    #[test]
+    #[cfg(feature = "strict")]
+    fn test_text_parser_strict() {
+        let (_, md) = text_parser("*** 不合法加粗斜体 ~~合法删除线~~  ***").unwrap();
+        assert_eq!(
+            md,
+            Markdown::Vanilla(vec![
+                Markdown::Text("***"),
+                Markdown::Text(" 不合法加粗斜体 "),
+                Markdown::Strike(vec![
+                    Markdown::Text("合法删除线"),
+                ]),
+                Markdown::Text("  "),
+                Markdown::Text("***")
+            ])
+        );
     }
 }

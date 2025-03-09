@@ -6,3 +6,7 @@ edition = "2024"
 [dependencies]
 nom = "8.0.0"
 urlocator = "0.1.4"
+
+[features]
+default = []
+strict = []
