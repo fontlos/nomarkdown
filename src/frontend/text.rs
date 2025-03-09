@@ -4,8 +4,8 @@
 use nom::{IResult, Parser, error::Error};
 use nom::{
     branch::alt,
-    combinator::{map, map_parser},
     bytes::complete::{tag, take_until},
+    combinator::{map, map_parser},
 };
 
 use super::Markdown;
