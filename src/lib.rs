@@ -1,4 +1,4 @@
 mod backend;
 mod frontend;
 
-pub use frontend::Markdown;
+pub use frontend::*;

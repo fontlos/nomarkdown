@@ -1,14 +1,17 @@
 mod code;
-mod head;
-mod link;
-mod list;
+mod math;
 mod parse;
 mod text;
 mod utils;
 
+pub use parse::line_element_parser;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Markdown<'a> {
     Config(Option<&'a str>),
+    /// # 普通文字
+    /// 注: HTML 标签默认作为普通文字不做处理,
+    /// 如果其内部文字干扰解析会导致解析出奇怪的东西
     Text(&'a str),
     Head {
         level: usize,
@@ -72,21 +75,21 @@ pub enum Markdown<'a> {
     },
     /// # 连续回车只解析成一个换行
     NewLine,
-    /// # 分割线
+    /// # 分割线, 三个以上
     /// ```Markdown
     /// ---
     /// ```
-    HorizontalRule,
-    /// # 原始链接
+    DividingLine,
+    /// # 原始链接, 链接自己作为标题
     /// ```Markdown
     /// https://example.com/
     /// ```
-    RawLink(&'a str),
+    ///
     /// #外部链接
     /// ```Markdown
     /// [title](url)
     /// ```
-    UrlLink {
+    Link {
         title: &'a str,
         url: &'a str,
     },
@@ -113,10 +116,18 @@ pub enum Markdown<'a> {
         lang: &'a str,
         code: &'a str,
     },
+    /// # 行内数学公式
+    /// ```Markdown
+    /// $math$
+    /// ```
+    Math(&'a str),
+    /// # 数学块
+    /// ```Markdown
+    /// $$math$$
+    /// ```
+    MathBlock(&'a str),
     /// # 表格
     Table(&'a str),
-    /// # 直接插入的原始 html 标签
-    HTML(&'a str),
     /// # 拓展语法，由双层大括号包裹
     Command(&'a str),
 }
