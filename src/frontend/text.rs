@@ -6,6 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
     combinator::{map, map_parser},
+    sequence::delimited,
 };
 
 use super::Markdown;
@@ -16,7 +17,8 @@ pub fn fenced<'a>(
     start: &'a str,
     end: &'a str,
 ) -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
-    map((tag(start), take_until(end), tag(end)), |x| x.1)
+    // 匹配两端标记并丢弃
+    delimited(tag(start), take_until(end), tag(end))
 }
 
 /// 文字变体解析器生成器
