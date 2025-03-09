@@ -5,48 +5,39 @@ use nom::{IResult, Parser, error::Error};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
-    combinator::{map, map_parser},
     sequence::delimited,
 };
 
 use super::Markdown;
 use super::parse::line_element_parser;
 
-/// 生成处理被特定模式包裹的字符串的函数
-pub fn fenced<'a>(
-    start: &'a str,
-    end: &'a str,
-) -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
-    // 匹配两端标记并丢弃
-    delimited(tag(start), take_until(end), tag(end))
-}
-
 /// 文字变体解析器生成器
 fn text_parser_gen<'a>(
     boundary: &'a str,
 ) -> impl Parser<&'a str, Output = Vec<Markdown<'a>>, Error = Error<&'a str>> {
-    // 将第一个解析器的匹配结果应用于第二个解析器
-    map_parser(fenced(boundary, boundary), line_element_parser)
+    delimited(tag(boundary), take_until(boundary), tag(boundary)).and_then(line_element_parser)
 }
 
 fn bold_italic(input: &str) -> IResult<&str, Markdown> {
-    map(text_parser_gen("***"), Markdown::BoldItalic).parse(input)
+    text_parser_gen("***")
+        .map(Markdown::BoldItalic)
+        .parse(input)
 }
 
 fn bold(input: &str) -> IResult<&str, Markdown> {
-    map(text_parser_gen("**"), Markdown::Bold).parse(input)
+    text_parser_gen("**").map(Markdown::Bold).parse(input)
 }
 
 fn italic(input: &str) -> IResult<&str, Markdown> {
-    map(text_parser_gen("*"), Markdown::Italic).parse(input)
+    text_parser_gen("*").map(Markdown::Italic).parse(input)
 }
 
 fn strike(input: &str) -> IResult<&str, Markdown> {
-    map(text_parser_gen("~~"), Markdown::Strike).parse(input)
+    text_parser_gen("~~").map(Markdown::Strike).parse(input)
 }
 
 fn highlight(input: &str) -> IResult<&str, Markdown> {
-    map(text_parser_gen("=="), Markdown::Highlight).parse(input)
+    text_parser_gen("==").map(Markdown::Highlight).parse(input)
 }
 
 pub fn text_parser(input: &str) -> IResult<&str, Markdown> {
