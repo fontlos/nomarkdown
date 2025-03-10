@@ -11,8 +11,8 @@ use nom::{
 use super::Markdown;
 use super::parse::line_element_parser;
 
-#[cfg(not(feature = "strict"))]
 /// 文字变体解析器生成器
+#[cfg(not(feature = "strict"))]
 fn text_parser_gen<'a, F>(
     boundary: &'a str,
     map: F,
@@ -25,8 +25,8 @@ where
         .map(map)
 }
 
-#[cfg(feature = "strict")]
 /// 文字变体解析器生成器严格模式
+#[cfg(feature = "strict")]
 fn text_parser_gen<'a, F, G, P>(
     boundary: &'a str,
     parser: G,
@@ -62,6 +62,14 @@ where
     }
 }
 
+// 类似 take_until, 但是消耗定界符
+fn take_until_boundary<'a>(input: &'a str, boundary: &'static str) -> IResult<&'a str, &'a str> {
+    if let Some(pos) = input.find(boundary) {
+        return Ok((&input[pos + boundary.len()..], &input[..pos]));
+    }
+    Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::TakeUntil)))
+}
+
 fn bold_italic(input: &str) -> IResult<&str, Markdown> {
     #[cfg(not(feature = "strict"))]
     {
@@ -71,6 +79,20 @@ fn bold_italic(input: &str) -> IResult<&str, Markdown> {
     text_parser_gen("***", take_until, Markdown::BoldItalic).parse(input)
 }
 
+// take_until 内部差不多也是这么实现的
+#[cfg(feature = "strict")]
+fn take_until_bold(input: &str) -> IResult<&str, &str> {
+    if let Some(pos) = input.find("**") {
+        // 如果实际上找到了 `***``, 向后移动一格
+        if input[pos + 2..].starts_with('*') {
+            return Ok((&input[pos + 3..], &input[..pos + 1]));
+        } else {
+            return Ok((&input[pos + 2..], &input[..pos]));
+        }
+    }
+    Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::TakeUntil)))
+}
+
 fn bold(input: &str) -> IResult<&str, Markdown> {
     #[cfg(not(feature = "strict"))]
     {
@@ -78,6 +100,20 @@ fn bold(input: &str) -> IResult<&str, Markdown> {
     }
     #[cfg(feature = "strict")]
     text_parser_gen("**", take_until, Markdown::Bold).parse(input)
+}
+
+#[cfg(feature = "strict")]
+fn take_until_italic(input: &str) -> IResult<&str, &str> {
+    let mut start = 0;
+    while let Some(pos) = input[start..].find('*') {
+        let pos = start + pos;
+        if input[pos + 1..].starts_with("*") {
+            start = pos + 2; // 跳过 `**`
+        } else {
+            return Ok((&input[pos + 1..], &input[..pos]));
+        }
+    }
+    Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::TakeUntil)))
 }
 
 fn italic(input: &str) -> IResult<&str, Markdown> {
@@ -114,6 +150,62 @@ pub fn text_parser(input: &str) -> IResult<&str, Markdown> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_take_until_boundary() {
+        let (remaining, parsed) = take_until_boundary("粗体**其他内容", "**").unwrap();
+        assert_eq!(remaining, "其他内容");
+        assert_eq!(parsed, "粗体");
+    }
+
+    #[test]
+    #[cfg(feature = "strict")]
+    fn test_take_until_bold1() {
+        let (remaining, parsed) = take_until_bold("粗体*嵌套的斜体***其他内容").unwrap();
+        assert_eq!(remaining, "其他内容");
+        assert_eq!(parsed, "粗体*嵌套的斜体*");
+    }
+
+    #[test]
+    #[cfg(feature = "strict")]
+    fn test_take_until_bold2() {
+        let (remaining, parsed) = take_until_bold("粗体*嵌套的斜体***").unwrap();
+        assert_eq!(remaining, "");
+        assert_eq!(parsed, "粗体*嵌套的斜体*");
+    }
+
+    #[test]
+    #[should_panic]
+    #[cfg(feature = "strict")]
+    fn test_take_until_bold3() {
+        // 抑制 panic 输出
+        std::panic::set_hook(Box::new(|_| {}));
+        let _ = take_until_bold("粗体*嵌套的斜体*").unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "strict")]
+    fn test_take_until_italic1() {
+        let (remaining, parsed) = take_until_italic("斜体**内嵌的粗体****内嵌的粗体2***其他内容").unwrap();
+        assert_eq!(remaining, "其他内容");
+        assert_eq!(parsed, "斜体**内嵌的粗体****内嵌的粗体2**");
+    }
+
+    #[test]
+    #[cfg(feature = "strict")]
+    fn test_take_until_italic2() {
+        let (remaining, parsed) = take_until_italic("斜体**内嵌的粗体****内嵌的粗体2***").unwrap();
+        assert_eq!(remaining, "");
+        assert_eq!(parsed, "斜体**内嵌的粗体****内嵌的粗体2**");
+    }
+
+    #[test]
+    #[should_panic]
+    #[cfg(feature = "strict")]
+    fn test_take_until_italic3() {
+        std::panic::set_hook(Box::new(|_| {}));
+        let _ = take_until_italic("斜体**内嵌的粗体****内嵌的粗体2**").unwrap();
+    }
 
     #[test]
     fn test_text_parser() {
