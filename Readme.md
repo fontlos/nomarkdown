@@ -4,3 +4,4 @@ By default, normal Markdown is parsed, but if the 'strict' feature is enabled, t
 
 - `* Variants of text that are not immediately adjacent to the delimiter will not be parsed, including italics, bold, etc *`
 - `$ Inline math formulas that are not immediately adjacent to the delimiter will not be parsed $`
+- `*italic nested **bold***, and **bold nested *italic***`
