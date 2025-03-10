@@ -25,4 +25,17 @@ https://www.原始链接.com
 单个斜杠换行\
 标签换行<br>
 
-$ math \bran $
+
+
+我在实际使用组合子的时候
+
+pub fn text_parser(input: &str) -> IResult<&str, Markdown> {
+    alt((bold_italic, bold, italic, strike, highlight)).parse(input)
+}
+
+已经按照这种优先级排序了, 问题就出在逆优先级的情况, 我们可以默认***这种粗斜体内不可能嵌套任何粗体斜体, 即使嵌套我们也拒绝按照嵌套来解析. 所以问题主要出在粗体和斜体的嵌套
+
+vscode也没有好的方案, 那就
+
+总之匹配*就跳过**, 找不到就匹配失败, 找到***就匹配后面的*
+匹配**就跳过*, 找不到就匹配失败, 找到***就匹配后面的**

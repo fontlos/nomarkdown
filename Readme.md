@@ -1,4 +1,4 @@
-# Nomarkdown: Markdown parser powered by nom
+# Nomarkdown: A toy parser for Markdown powered by Nom
 
 By default, normal Markdown is parsed, but if the 'strict' feature is enabled, the following changes will be made:
 

@@ -3,6 +3,7 @@ use nom::{IResult, Parser};
 use super::Markdown;
 use super::utils::fenced;
 
+#[cfg(not(feature = "strict"))]
 // 行内数学公式
 // 只要能检测到定界符就匹配掉, 但如果匹配中心的文字两边有空白字符,
 // 那么不作为数学公式被匹配, 而是作为普通文字
@@ -35,15 +36,9 @@ mod tests {
         let (_, md) = math("$x^2$").unwrap();
         assert_eq!(md, Markdown::Math("x^2"));
         let (_, md) = math("$ x^2 $").unwrap();
-        assert_eq!(md, Markdown::Math(" x^2 "));
-    }
-
-    #[test]
-    #[cfg(feature = "strict")]
-    fn test_math_strict() {
-        let (_, md) = math("$x^2$").unwrap();
-        assert_eq!(md, Markdown::Math("x^2"));
-        let (_, md) = math("$ x^2 $").unwrap();
+        #[cfg(feature = "strict")]
         assert_eq!(md, Markdown::Text("$ x^2 $"));
+        #[cfg(not(feature = "strict"))]
+        assert_eq!(md, Markdown::Math(" x^2 "));
     }
 }
